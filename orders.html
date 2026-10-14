@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Orders — AURA LUXE</title>
+  <meta name="description" content="View all confirmed customer purchases and orders stored in Supabase with real-time status and invoices.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Core CSS -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Supabase Official JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Ambient background glow -->
+  <div class="ambient-glow"></div>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand-logo" id="nav-brand">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-text">AURA<span>LUXE</span></div>
+      </a>
+
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link" id="nav-products-link">
+          <span>🛍️</span> Products
+        </a>
+        <a href="orders.html" class="nav-link active" id="nav-orders-link">
+          <span>📦</span> Orders
+          <span class="nav-badge" id="orders-badge" style="display: none;">0</span>
+        </a>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="status-badge" title="Connected to Supabase Order table">
+          <span class="status-dot"></span>
+          <span>Supabase Synced</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-refresh-orders" title="Pull latest orders from Supabase">
+          <span id="refresh-icon">🔄</span> Refresh
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-tag">
+      <span>📦</span> Live Order Management &amp; Fulfillment
+    </div>
+    <h1 class="hero-title">
+      Customer Orders &amp; <span class="hero-gradient">Transactions</span>
+    </h1>
+    <p class="hero-subtitle">
+      All orders automatically synced directly with your Supabase database table <code>public.Order</code> in real-time.
+    </p>
+
+    <!-- Order Stats -->
+    <div class="hero-stats" id="orders-stats">
+      <div class="stat-item">
+        <span class="stat-value" id="stat-total-orders">--</span>
+        <span class="stat-label">Total Orders Placed</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="stat-unique-customers">--</span>
+        <span class="stat-label">Unique Customers</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="stat-latest-time">--</span>
+        <span class="stat-label">Last Order Activity</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Orders Search & Filter Controls -->
+  <section class="controls-section">
+    <div class="controls-card">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          id="orders-search-input" 
+          class="search-input" 
+          placeholder="Search by customer name, phone number, or product..." 
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="filter-group">
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary btn-sm" id="btn-view-cards" title="Cards View">🗂️ Cards</button>
+          <button class="btn btn-secondary btn-sm" id="btn-view-table" title="Table View">📊 Table</button>
+        </div>
+
+        <select id="orders-sort-select" class="sort-select" aria-label="Sort orders">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="name">Customer Name (A-Z)</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Orders Content -->
+  <main class="main-container">
+    <div id="orders-container">
+      <!-- Loading skeleton -->
+      <div class="product-card skeleton" style="height: 140px; margin-bottom: 1rem;"></div>
+      <div class="product-card skeleton" style="height: 140px; margin-bottom: 1rem;"></div>
+      <div class="product-card skeleton" style="height: 140px;"></div>
+    </div>
+  </main>
+
+  <!-- Digital Invoice / Receipt Modal -->
+  <div class="modal-overlay" id="invoice-modal">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span>🧾</span> Official Order Receipt
+        </h2>
+        <button class="modal-close" id="btn-close-invoice">&times;</button>
+      </div>
+      <div class="modal-body" id="invoice-content">
+        <!-- Rendered dynamically -->
+      </div>
+      <div style="padding: 1rem 1.75rem 1.75rem; display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid var(--border-subtle);">
+        <button class="btn btn-secondary" id="btn-print-invoice">
+          <span>🖨️ Print Receipt</span>
+        </button>
+        <button class="btn btn-primary" id="btn-done-invoice">
+          <span>Done</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="brand-text" style="font-family: var(--font-display); font-weight: 700; font-size: 1.1rem;">
+        AURA<span>LUXE</span> Store
+      </div>
+      <p>Direct Supabase Postgres integration. No login required. Fast, secure checkout.</p>
+      <div class="footer-links">
+        <a href="index.html" class="footer-link">Products Catalog</a>
+        <a href="orders.html" class="footer-link">Customer Orders</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="supabase-client.js"></script>
+  <script src="orders.js"></script>
+</body>
+</html>

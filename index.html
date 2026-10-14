@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA LUXE — Premium Electronics & Lifestyle</title>
+  <meta name="description" content="Discover premium electronics, audio gear, and lifestyle products with instant ordering and direct Supabase synchronization.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Core CSS -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Supabase Official JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Ambient background glow -->
+  <div class="ambient-glow"></div>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand-logo" id="nav-brand">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-text">AURA<span>LUXE</span></div>
+      </a>
+
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link active" id="nav-products-link">
+          <span>🛍️</span> Products
+        </a>
+        <a href="orders.html" class="nav-link" id="nav-orders-link">
+          <span>📦</span> Orders
+          <span class="nav-badge" id="orders-badge" style="display: none;">0</span>
+        </a>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="status-badge" title="Live connection to Supabase database">
+          <span class="status-dot"></span>
+          <span>Supabase Live</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-open-add-product" title="List a new product to Supabase">
+          <span>➕ Add Product</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-tag">
+      <span>🚀</span> Live Supabase Cloud Database Connected
+    </div>
+    <h1 class="hero-title">
+      Curated Tech &amp; <span class="hero-gradient">Luxury Goods</span>
+    </h1>
+    <p class="hero-subtitle">
+      Browse top-tier hardware and premium electronics. Seamless instant purchasing backed directly by your Supabase PostgreSQL database.
+    </p>
+
+    <!-- Live Stats -->
+    <div class="hero-stats" id="hero-stats">
+      <div class="stat-item">
+        <span class="stat-value" id="stat-total-products">--</span>
+        <span class="stat-label">Products In Store</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="stat-active-deals">--</span>
+        <span class="stat-label">Special Discounts</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="stat-available-stock">--</span>
+        <span class="stat-label">In Stock Items</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Controls Section: Search & Filter -->
+  <section class="controls-section">
+    <div class="controls-card">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          id="search-input" 
+          class="search-input" 
+          placeholder="Search products by title, company, or specs..." 
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="filter-group">
+        <div class="company-pills" id="company-pills">
+          <button class="pill-btn active" data-company="all">All Brands</button>
+          <!-- Dynamic brand pills will populate here -->
+        </div>
+
+        <select id="sort-select" class="sort-select" aria-label="Sort products">
+          <option value="default">Featured</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="discount-desc">Biggest Discount</option>
+          <option value="name-asc">Name: A to Z</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Product Catalog Grid -->
+  <main class="main-container">
+    <div class="products-grid" id="products-grid">
+      <!-- Skeleton Loaders -->
+      <div class="product-card skeleton" style="height: 420px;"></div>
+      <div class="product-card skeleton" style="height: 420px;"></div>
+      <div class="product-card skeleton" style="height: 420px;"></div>
+      <div class="product-card skeleton" style="height: 420px;"></div>
+    </div>
+  </main>
+
+  <!-- Checkout / Buy Modal -->
+  <div class="modal-overlay" id="checkout-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span>🛍️</span> Complete Your Purchase
+        </h2>
+        <button class="modal-close" id="btn-close-checkout">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Selected Product Overview -->
+        <div class="order-summary-box" id="checkout-product-summary">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Price Breakdown -->
+        <div class="cost-breakdown">
+          <div class="cost-row">
+            <span>List Price (MSRP)</span>
+            <span id="checkout-original-price">$0.00</span>
+          </div>
+          <div class="cost-row">
+            <span>Discount Applied</span>
+            <span id="checkout-discount-price" style="color: var(--accent-rose);">- $0.00</span>
+          </div>
+          <div class="cost-row">
+            <span>Standard Express Shipping</span>
+            <span style="color: var(--accent-emerald); font-weight: 600;">FREE</span>
+          </div>
+          <div class="cost-row total-row">
+            <span>Total Payable</span>
+            <span id="checkout-total-price" style="color: var(--accent-emerald);">$0.00</span>
+          </div>
+        </div>
+
+        <!-- Customer Purchase Form -->
+        <form id="checkout-form">
+          <input type="hidden" id="order-product-id" />
+          <input type="hidden" id="order-product-name" />
+
+          <div class="form-group">
+            <label class="form-label" for="customer-name">
+              Full Customer Name <span class="req">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="customer-name" 
+              class="form-control" 
+              placeholder="e.g. Alexander Hamilton" 
+              required 
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="customer-phone">
+              Contact Phone Number <span class="req">*</span>
+            </label>
+            <input 
+              type="tel" 
+              id="customer-phone" 
+              class="form-control" 
+              placeholder="e.g. 9876543210 (digits only)" 
+              pattern="[0-9]{7,15}"
+              required 
+            />
+            <div class="form-hint">Stored securely in Supabase Order table (Customer_Ph_No)</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="customer-address">
+              Shipping / Delivery Address <span class="req">*</span>
+            </label>
+            <textarea 
+              id="customer-address" 
+              class="form-control" 
+              rows="3" 
+              placeholder="Apartment, Street address, City, State, Postal code" 
+              required
+            ></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-emerald btn-full" id="btn-confirm-order">
+            <span>⚡ Confirm &amp; Place Order</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Success Modal -->
+  <div class="modal-overlay" id="success-modal">
+    <div class="modal-card">
+      <div class="modal-body success-content">
+        <div class="success-icon-wrap">✓</div>
+        <h2 class="success-title">Order Placed Successfully!</h2>
+        <p class="success-subtitle">
+          Your order has been securely saved to the Supabase database.
+        </p>
+
+        <div class="success-receipt" id="success-receipt-details">
+          <!-- Populated dynamically -->
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+          <a href="orders.html" class="btn btn-primary" id="btn-go-to-orders">
+            <span>📦 View In Orders Page</span>
+          </a>
+          <button class="btn btn-secondary" id="btn-continue-shopping">
+            <span>🛍️ Keep Shopping</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Product Modal -->
+  <div class="modal-overlay" id="add-product-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span>➕</span> Add New Product
+        </h2>
+        <button class="modal-close" id="btn-close-add-product">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="add-product-form">
+          <div class="form-group">
+            <label class="form-label" for="new-company">Brand / Company <span class="req">*</span></label>
+            <input type="text" id="new-company" class="form-control" placeholder="e.g. Apple, Sony, Nike" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-product-name">Product Name <span class="req">*</span></label>
+            <input type="text" id="new-product-name" class="form-control" placeholder="e.g. Wireless Pro Headset" required />
+            <div class="form-hint">Stored in table column: Customer_Name</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-description">Product Description <span class="req">*</span></label>
+            <textarea id="new-description" class="form-control" rows="2" placeholder="Key specs, highlights, materials..." required></textarea>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="new-order-price">Original Price ($) <span class="req">*</span></label>
+              <input type="number" step="0.01" min="0" id="new-order-price" class="form-control" placeholder="199.00" required />
+              <div class="form-hint">Column: Order</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="new-discount">Discount Amount ($) <span class="req">*</span></label>
+              <input type="number" step="0.01" min="0" id="new-discount" class="form-control" placeholder="30.00" required />
+              <div class="form-hint">Column: Discount_amount</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-actual-price">Final Selling Price ($)</label>
+            <input type="number" step="0.01" id="new-actual-price" class="form-control" placeholder="Auto calculated" readonly style="opacity: 0.7; cursor: not-allowed;" />
+            <div class="form-hint">Auto computed: Original Price - Discount (Column: Actual_Amount)</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-image-url">Image URL <span class="req">*</span></label>
+            <input type="url" id="new-image-url" class="form-control" placeholder="https://images.unsplash.com/..." required />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full" id="btn-save-new-product">
+            <span>💾 Save to Supabase Product Table</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="brand-text" style="font-family: var(--font-display); font-weight: 700; font-size: 1.1rem;">
+        AURA<span>LUXE</span> Store
+      </div>
+      <p>Direct Supabase Postgres integration. No login required. Fast, secure checkout.</p>
+      <div class="footer-links">
+        <a href="index.html" class="footer-link">Products Catalog</a>
+        <a href="orders.html" class="footer-link">Customer Orders</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="supabase-client.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
